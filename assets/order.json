@@ -1,4 +1,3 @@
-
 [
   {
     "Item": "A1000",
@@ -13,5 +12,12 @@
     "Price": 1500,
     "Currency": "USD",
     "Quantity": 1
+  },
+  {
+    "Item": "A3200",
+    "ItemName": "Samsung A32",
+    "Price": 200,
+    "Currency": "USD",
+    "Quantity": 2
   }
 ]

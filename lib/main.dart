@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:file_saver/file_saver.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
 import 'order.dart';
 
 void main() => runApp(const MyApp());
@@ -55,12 +55,16 @@ class _OrderPageState extends State<OrderPage> {
     loadOrders();
   }
 
+  static final Uri apiUrl = Uri.parse('http://127.0.0.1:8080/orders');
+  Future<void> _pendingSave = Future.value();
+
   Future<void> loadOrders() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final savedData = prefs.getString('saved_orders');
-      final source = savedData ?? await rootBundle.loadString('assets/order.json');
-      final decoded = jsonDecode(source) as List<dynamic>;
+      final response = await http.get(apiUrl);
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+      final decoded = jsonDecode(utf8.decode(response.bodyBytes)) as List<dynamic>;
       if (!mounted) return;
       setState(() {
         orders = decoded.map((e) => Order.fromJson(e)).toList();
@@ -70,20 +74,24 @@ class _OrderPageState extends State<OrderPage> {
       debugPrint('Error loading orders: $e');
       if (mounted) {
         setState(() => loading = false);
-        showMessage('Cannot load orders: $e');
+        showMessage('Cannot connect to Dart backend. Start server.dart first.');
       }
     }
   }
 
-  Future<void> saveOrders() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final data = jsonEncode(orders.map((o) => o.toJson()).toList());
-      final ok = await prefs.setString('saved_orders', data);
-      if (!ok && mounted) showMessage('Could not save orders locally');
-    } catch (e) {
-      if (mounted) showMessage('Save failed: $e');
-    }
+  Future<void> saveOrders() {
+    final snapshot = jsonEncode(orders.map((o) => o.toJson()).toList());
+    // Serialize writes so rapid edits do not overwrite newer changes.
+    final result = _pendingSave.catchError((Object _) {}).then((_) async {
+      final response = await http.put(apiUrl,
+          headers: {'Content-Type': 'application/json; charset=utf-8'},
+          body: snapshot);
+      if (response.statusCode != 200) {
+        throw Exception('HTTP ${response.statusCode}: ${response.body}');
+      }
+    });
+    _pendingSave = result;
+    return result;
   }
 
   Future<void> saveOrdersToJson() async {
@@ -108,7 +116,7 @@ class _OrderPageState extends State<OrderPage> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void addOrder() {
+  Future<void> addOrder() async {
     final price = double.tryParse(priceController.text.trim());
     final quantity = int.tryParse(quantityController.text.trim());
     if (itemController.text.trim().isEmpty ||
@@ -128,7 +136,13 @@ class _OrderPageState extends State<OrderPage> {
             ? 'USD' : currencyController.text.trim(),
       ));
     });
-    saveOrders();
+    try {
+      await saveOrders();
+    } catch (e) {
+      if (mounted) showMessage('Save failed: $e');
+      return;
+    }
+    if (!mounted) return;
     itemController.clear();
     nameController.clear();
     priceController.clear();
@@ -136,10 +150,14 @@ class _OrderPageState extends State<OrderPage> {
     showMessage('Order added successfully');
   }
 
-  void deleteOrder(Order order) {
+  Future<void> deleteOrder(Order order) async {
     setState(() => orders.remove(order));
-    saveOrders();
-    showMessage('Order deleted');
+    try {
+      await saveOrders();
+      if (mounted) showMessage('Order deleted');
+    } catch (e) {
+      if (mounted) showMessage('Save failed: $e');
+    }
   }
 
   Widget inputField(String label, TextEditingController controller,
@@ -203,12 +221,6 @@ class _OrderPageState extends State<OrderPage> {
                     icon: const Icon(Icons.add_shopping_cart),
                     label: const Text('Add Item to Cart'),
                     style: FilledButton.styleFrom(backgroundColor: accent, padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16)),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: saveOrdersToJson,
-                    icon: const Icon(Icons.download_outlined),
-                    label: const Text('Save order.json'),
-                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 16)),
                   ),
                 ]),
               ])),
