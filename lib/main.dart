@@ -244,43 +244,76 @@ class _OrderPageState extends State<OrderPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 18),
-                if (loading) const Center(child: CircularProgressIndicator())
-                else if (filteredOrders.isEmpty)
-                  const Padding(padding: EdgeInsets.all(28), child: Center(child: Text('No orders found')))
-                else SizedBox(width: double.infinity, child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: DataTable(
-                    headingRowColor: WidgetStateProperty.all(const Color(0xFFF4E2DA)),
-                    dataRowMinHeight: 54,
-                    dataRowMaxHeight: 62,
-                    columns: const [
-                      DataColumn(label: Text('Id')),
-                      DataColumn(label: Text('Item')),
-                      DataColumn(label: Text('Item Name')),
-                      DataColumn(label: Text('Quantity')),
-                      DataColumn(label: Text('Price')),
-                      DataColumn(label: Text('Currency')),
-                      DataColumn(label: Text('Action')),
-                    ],
-                    rows: filteredOrders.map((order) {
-                      final originalIndex = orders.indexOf(order) + 1;
-                      return DataRow(cells: [
-                        DataCell(Text('$originalIndex')),
-                        DataCell(Text(order.item)),
-                        DataCell(Text(order.itemName)),
-                        DataCell(Text('${order.quantity}')),
-                        DataCell(Text('${order.price}')),
-                        DataCell(Text(order.currency)),
-                        DataCell(IconButton(
-                          tooltip: 'Delete order',
-                          icon: const Icon(Icons.delete_outline, color: Colors.redAccent),
-                          onPressed: () => deleteOrder(order),
-                        )),
-                      ]);
-                    }).toList(),
+              const SizedBox(height: 18),
+              if (loading)
+                const Center(
+                  child: CircularProgressIndicator(),
+                )
+              else if (filteredOrders.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(28),
+                  child: Center(
+                    child: Text('No orders found'),
                   ),
-                )),
+                )
+              else
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SizedBox(
+                      width: double.infinity,
+                      child: SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minWidth: constraints.maxWidth,
+                          ),
+                          child: DataTable(
+                            headingRowColor: WidgetStateProperty.all(
+                              const Color(0xFFF4E2DA),
+                            ),
+                            dataRowMinHeight: 54,
+                            dataRowMaxHeight: 62,
+                            columnSpacing: 30,
+                            horizontalMargin: 20,
+                            columns: const [
+                              DataColumn(label: Text('Id')),
+                              DataColumn(label: Text('Item')),
+                              DataColumn(label: Text('Item Name')),
+                              DataColumn(label: Text('Quantity')),
+                              DataColumn(label: Text('Price')),
+                              DataColumn(label: Text('Currency')),
+                              DataColumn(label: Text('Action')),
+                            ],
+                            rows: filteredOrders.map((order) {
+                              final originalIndex = orders.indexOf(order) + 1;
+
+                              return DataRow(
+                                cells: [
+                                  DataCell(Text('$originalIndex')),
+                                  DataCell(Text(order.item)),
+                                  DataCell(Text(order.itemName)),
+                                  DataCell(Text('${order.quantity}')),
+                                  DataCell(Text('${order.price}')),
+                                  DataCell(Text(order.currency)),
+                                  DataCell(
+                                    IconButton(
+                                      tooltip: 'Delete order',
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        color: Colors.redAccent,
+                                      ),
+                                      onPressed: () => deleteOrder(order),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ])),
               const SizedBox(height: 22),
               Container(

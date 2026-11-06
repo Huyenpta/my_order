@@ -19,5 +19,12 @@
     "Price": 200,
     "Currency": "USD",
     "Quantity": 2
+  },
+  {
+    "Item": "IP1000",
+    "ItemName": "Iphone 17",
+    "Price": 2000,
+    "Currency": "USD",
+    "Quantity": 2
   }
 ]
